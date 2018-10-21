@@ -1,19 +1,58 @@
-import socket
+# coding: utf8
 
-hostname, sld, tld, port = 'www', 'integralist', 'co.uk', 80
-target = '{}.{}.{}'.format(hostname, sld, tld)
+import sys
+import pickle
+import time
+from random import randint
+from string import ascii_lowercase
+from socket import *
+from config import server_ip, server_port, time_interval
+from dbase import db_exec
 
-# create an ipv4 (AF_INET) socket object using the tcp protocol (SOCK_STREAM)
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-# connect the client
-# client.connect((target, port))
-client.connect(('0.0.0.0', 9999))
 
-# send some data (in this case a HTTP GET request)
-client.send('GET /index.html HTTP/1.1\r\nHost: {}.{}\r\n\r\n'.format(sld, tld))
+def generate_client_id(id_len=20):
+    clinet_id = ''
+    for i in range(id_len):
+        clinet_id += ascii_lowercase[randint(0, 25)]
+    return clinet_id
 
-# receive the response data (4096 is recommended buffer size)
-response = client.recv(4096)
 
-print response
+def get_client_data():
+    c_data = {}
+    c_data['client_id'] = db_exec('select * from client')
+    c_data['task_id'] = db_exec('select * from task')
+    return c_data
+
+
+def start_client(sec):
+
+    while True:  
+
+        client = socket(AF_INET, SOCK_STREAM)
+        
+        try:
+            client.connect((server_ip, server_port))
+            c_data = get_client_data()
+            client.send(pickle.dumps(c_data))
+            s_data = client.recv(1024)
+            print(s_data.decode())
+            
+        except ConnectionRefusedError as err:
+            print(f'Ошибка соединения: {err}')
+
+        finally:
+            client.close()
+        
+        time.sleep(sec)
+
+
+def check_client_id():
+    cid = db_exec('select client_id from client')
+    if not cid:
+        db_exec(f'insert into client(client_id) values({generate_client_id()})')
+
+        
+if __name__ == '__main__':
+    check_client_id()
+    start_client(time_interval)
