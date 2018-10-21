@@ -36,7 +36,13 @@ def start_client(sec):
             c_data = get_client_data()
             client.send(pickle.dumps(c_data))
             s_data = client.recv(1024)
-            print(s_data.decode())
+            try:
+                data = pickle.loads(s_data)
+                print(data)
+            except EOFError:
+                data = {}
+
+
             
         except ConnectionRefusedError as err:
             print(f'Ошибка соединения: {err}')

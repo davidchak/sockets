@@ -31,7 +31,15 @@ while True:
         if not cid_db:
             db_exec(f"insert into clients(name) values ('{cid}')")
 
+        last_client_task_id = data['task_id']
+        last_server_task_id = db_exec("select seq from sqlite_sequence where sqlite_sequence.name='task'")
 
-        connection.send(b'otvet')
+        if last_client_task_id < last_server_task_id[0][0]:
+            new_client_task = db_exec(
+                f'select * from task where task_id = {last_server_task_id[0][0]}'
+            )
+            connection.send(pickle.dumps(new_client_task))
+        else:
+            connection.send(b'otvet')
 
     connection.close()
