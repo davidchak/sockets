@@ -4,7 +4,7 @@ import sqlite3
 from config import db_path
 
 
-def db_exec(new_query):
+def db_exec(new_query, return_result=True):
 
     con = sqlite3.connect(db_path)
 
@@ -12,8 +12,9 @@ def db_exec(new_query):
         cur = con.cursor()
         try:
             cur.execute(new_query)
-            result = cur.fetchone()
-            return result[0]
+            if return_result == True:
+                result = cur.fetchall()
+                return result
         except sqlite3.DatabaseError as err:
             return err
 
