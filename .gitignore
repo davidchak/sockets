@@ -3,3 +3,4 @@ app.db
 client.db
 __pycache__
 *.pyc
+.vscode

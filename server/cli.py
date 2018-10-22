@@ -1,5 +1,6 @@
 # coding: utf8
 
+import os
 import sys
 import subprocess
 import time
@@ -91,7 +92,8 @@ def cli():
         result = input('Введите команду: \n >>')
         
         if result.lower() == '1':
-            code = subprocess.call(["python.exe", "server.py"])
+            os.startfile("server.py")
+    
 
         elif result.lower() == '2':
             start_construktor()
@@ -104,10 +106,6 @@ def cli():
         else:
             print('Команда не распознана')
             continue
-
-
-
-
 
 
 if __name__ == '__main__':

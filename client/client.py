@@ -1,21 +1,62 @@
 # coding: utf8
 
+#########################################################
+#
+#   Название: client
+#   Автор: dchk09 (davidchak@yandex.ru)
+#   Версия: 1.0
+#   Дата разработки: 22.10.2018
+#
+#########################################################
+
+
 import sys
+import os
 import pickle
 import time
+import sqlite3
 from random import randint
 from string import ascii_lowercase
 from socket import *
 import json
 from pathlib import Path
-from config import server_ip, server_port, time_interval, json_file_path
 from dbase import db_exec
 
+base_dir = os.path.abspath(os.path.dirname(__name__))
+db_path = os.path.join(base_dir, 'client.db')
 
-def create_db():
-    db_exec("CREATE TABLE 'client' ('client_id'	TEXT)")
-    db_exec("CREATE TABLE 'task' ('task_id'	INTEGER)")
-    db_exec("INSERT INTO task(task_id) VALUES(0)")
+
+######################### НАСТРОЙКИ ##########################
+#
+# адрес сервера
+server_ip = '127.0.0.1'
+#
+# порт сервера
+server_port = 8251
+#
+# интервал запроса обновлений, в секундах
+time_interval = 5
+#
+# ссылка на папку с программой
+json_file_path = os.path.join(base_dir, 'prog', 'Import.json')
+#
+###############################################################
+
+
+def db_exec(new_query, return_result=True):
+
+    con = sqlite3.connect(db_path)
+
+    with con:
+        cur = con.cursor()
+        try:
+            cur.execute(new_query)
+            if return_result == True:
+                result = cur.fetchall()
+                return result
+            cur.commit()
+        except sqlite3.DatabaseError as err:
+            return err
 
 
 def generate_client_id(id_len=20):
@@ -25,12 +66,13 @@ def generate_client_id(id_len=20):
     return clinet_id
 
 
-# def check_client_id():
-# 	cid = db_exec('select client_id from client')
-# 	print(cid)
-# 	if not cid:
-# 		db_exec(f'insert into client(client_id) values({generate_client_id()})')
-
+def create_db():
+    if not os.path.exists(db_path):
+        db_exec("CREATE TABLE 'client' ('client_id'	TEXT)")
+        db_exec("CREATE TABLE 'task' ('task_id'	INTEGER)")
+        db_exec("INSERT INTO task(task_id) VALUES(1)")
+        new_cid = generate_client_id()
+        db_exec(f"insert into client(client_id) values('{new_cid}')")
 
 
 def get_client_data():
@@ -75,7 +117,6 @@ def start_client(sec):
             s_data = client.recv(1024)
             try:
                 data = pickle.loads(s_data)
-                # print(data)
                 # парсим ответ сервера
                 c_task_id = db_exec('select task_id from task')[0][0]
 
@@ -88,26 +129,21 @@ def start_client(sec):
                     print('Новых заданий нет')
 
             except EOFError:
-                data = {}
+                pass
 
-
-            
         except ConnectionRefusedError as err:
-            print(f'Ошибка соединения: {err}')
+            print(err)
+            
+
+        except ConnectionResetError as err:
+            print(err)
 
         finally:
             client.close()
-        
+
         time.sleep(sec)
-
-
-
-
-
-        
 
         
 if __name__ == '__main__':
     create_db()
-    check_client_id()
     start_client(time_interval)
