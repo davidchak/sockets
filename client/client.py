@@ -1,15 +1,5 @@
 # coding: utf8
 
-#########################################################
-#
-#   Название: client
-#   Автор: dchk09 (davidchak@yandex.ru)
-#   Версия: 1.0
-#   Дата разработки: 22.10.2018
-#
-#########################################################
-
-
 import sys
 import os
 import pickle
@@ -20,27 +10,23 @@ from string import ascii_lowercase
 from socket import *
 import json
 from pathlib import Path
-from dbase import db_exec
+
 
 base_dir = os.path.abspath(os.path.dirname(__name__))
 db_path = os.path.join(base_dir, 'client.db')
+json_config_filepath = os.path.join(base_dir, 'config.json')
 
 
-######################### НАСТРОЙКИ ##########################
-#
-# адрес сервера
-server_ip = '127.0.0.1'
-#
-# порт сервера
-server_port = 8251
-#
-# интервал запроса обновлений, в секундах
-time_interval = 5
-#
-# ссылка на папку с программой
-json_file_path = os.path.join(base_dir, 'prog', 'Import.json')
-#
-###############################################################
+def get_config_from_json_file(json_config_file):
+    if os.path.exists(json_config_file):
+        path = Path(json_config_file)
+        try:
+            app_config = json.loads(path.read_text())
+            return app_config
+        except Error as json_err:
+            print(json_err)
+    else:
+        print('broken config.json')
 
 
 def db_exec(new_query, return_result=True):
@@ -103,8 +89,24 @@ def edit_json_file(json_path, s_task):
         print(json_err)
 
 
+def start_client():
 
-def start_client(sec):
+    # получаем настройки из файла config.json
+    app_config = get_config_from_json_file(json_config_filepath)
+
+    server_ip = app_config['server_ip']
+    server_port = app_config['server_port']
+    time_interval = app_config['time_interval']
+    json_file_path = app_config['json_file_path']
+
+
+    print('''
+    ===========================================
+        name: client
+        ver: 1.0
+        autor: dchak09 (davidchak@yandex.ru)
+    ===========================================
+    ''')
 
     while True:  
 
@@ -122,11 +124,11 @@ def start_client(sec):
 
                 # если есть новое задание, выполняем
                 if data['task_id'] != c_task_id:
-                    print(f'Новое задание {data}')
+                    print(f'New task: {data}')
                     edit_json_file(json_file_path, data)
                     db_exec(f"update task set task_id = {data['task_id']}")
                 else:
-                    print('Новых заданий нет')
+                    print('wait...')
 
             except EOFError:
                 pass
@@ -141,9 +143,9 @@ def start_client(sec):
         finally:
             client.close()
 
-        time.sleep(sec)
+        time.sleep(time_interval)
 
         
 if __name__ == '__main__':
     create_db()
-    start_client(time_interval)
+    start_client()

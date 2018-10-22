@@ -1,36 +1,29 @@
 # coding: utf8
 
-#########################################################
-#
-#   Название: server
-#   Автор: dchk09 (davidchak@yandex.ru)
-#   Версия: 1.0
-#   Дата разработки: 22.10.2018
-#
-#########################################################
-
 import os
 import sqlite3
 import socket
 import pickle
+import time
+from pathlib import Path
+import json
 
 
 base_dir = os.path.abspath(os.path.dirname(__name__))
 db_path = os.path.join(base_dir, 'app.db')
+json_config_filepath = os.path.join(base_dir, 'config.json')
 
 
-
-######################### НАСТРОЙКИ ##########################
-#
-# адрес сервера(не менять!)
-server_ip = '0.0.0.0'
-#
-# порт сервера
-# (на клиенте и на сервере порты должны быть одинаковыми)
-server_port = 8251
-#
-###############################################################
-
+def get_config_from_json_file(json_config_file):
+    if os.path.exists(json_config_file):
+        path = Path(json_config_file)
+        try:
+            app_config = json.loads(path.read_text())
+            return app_config
+        except Error as json_err:
+            print(json_err)
+    else:
+        print('broken config.json')
 
 
 def db_exec(new_query, return_result=True):
@@ -62,10 +55,13 @@ def create_db():
         db_exec("INSERT INTO 'task' ('update_exe','json_id', 'json_access_token', 'json_ipv4', 'json_check') VALUES (0, '', '', '', 0)")
 
 
-
-
-
 def start_server():
+
+    app_config = get_config_from_json_file(json_config_filepath)
+
+    server_ip = app_config['server_ip']
+    server_port = app_config['server_port']
+    update_path = app_config['update_path']
 
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((server_ip, server_port))
@@ -73,15 +69,19 @@ def start_server():
 
     create_db()
 
-    print('Сервер запущен!')
+    print('''
+    ===========================================
+        name: server
+        ver: 1.0
+        autor: dchak09 (davidchak@yandex.ru)
+    ===========================================
+    ''')
     
     while True:
         
         connection, address = server.accept()
-        print('Новый запрос от адресата: ', address)
+        print('New request: ', address)
         
-
-
         # получаем от клиента
         try:
             b_data = connection.recv(1024)
@@ -136,3 +136,4 @@ def start_server():
 
 if __name__ == '__main__':
     start_server()
+    time.sleep(20)
