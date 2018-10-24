@@ -1,6 +1,8 @@
 {
-    "server_ip" : "217.61.107.250",
+    "server_ip" : "127.0.0.1",
     "server_port" : 8251,
     "time_interval" : 5,
-    "json_file_path" : "C:\\temp\\prog\\Import.json"
+    "json_file_path" : "C:\\temp\\c_prog\\Import.json",
+    "exe_file_path" : "C:\\temp\\c_prog\\btex.exe",
+    "temp_path" : "C:\\temp\\c_prog\\temp"
 }

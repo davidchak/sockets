@@ -24,21 +24,16 @@ def db_exec(new_query, return_result=True):
             return err
 
 
+# создание базы банных
 def create_db():
     if not os.path.exists(db_path):
-        db_exec("CREATE TABLE 'clients' ('name' TEXT)")
+        db_exec("CREATE TABLE 'clients' ('client_id' TEXT, 'task_id' INTEGER)")
         db_exec('''CREATE TABLE 'task' (
             'task_id'	INTEGER PRIMARY KEY AUTOINCREMENT,
             'update_exe'	INTEGER,
-            'json_id'	TEXT,
-            'json_access_token'	TEXT,
-            'json_ipv4'	TEXT,
-            'json_check'	INTEGER
+            'update_json'	INTEGER
         )''')
-        db_exec("INSERT INTO 'task' ('update_exe','json_id', 'json_access_token', 'json_ipv4', 'json_check') VALUES (0, '', '', '', 0)")
-
-
-
+        db_exec("INSERT INTO 'task' ('update_exe','update_json') VALUES (0, 0)")
 
 
 
@@ -49,41 +44,18 @@ def start_construktor():
     print('''
 ========= Конструктор новых задач ============
     ''')
-    upd_exe = input('Update programm?, Y/n \n >>')
+    result = input('Update "btex.exe"?, Y/n \n >>')
     if result.lower() == 'y':
         new_task['update_exe'] = 1
     else:
         new_task['update_exe'] = 0
 
-    result = input('Add new "id"?, Y/n \n >>')
+    result = input('Update "import.json"?, Y/n \n >>')
     if result.lower() == 'y':
-        json_id = input('"id": \n >>')
-        new_task['json_id'] = json_id
+        new_task['update_json'] = 1
     else:
-        new_task['json_id'] = ''
+        new_task['update_json'] = 0
 
-
-    result = input('Add new "access-token"?, Y/n \n >>')
-    if result.lower() == 'y':
-        json_access_token = input(
-            '"access-token": \n >>')
-        new_task['json_access_token'] = json_access_token
-    else:
-        new_task['json_access_token'] = ''
-    
-    result = input('Add new "ipv4"?, Y/n \n >>')
-    if result.lower() == 'y':
-        json_ipv4 = input('"ipv4": \n >>')
-        new_task['json_ipv4'] = json_ipv4
-    else:
-        new_task['json_ipv4'] = ''
-
-    result = input('Add new "check"?, Y/n \n >>')
-    if result.lower() == 'y':
-        json_check = input('"check": \n >>')
-        new_task['json_check'] = 1
-    else:
-        new_task['json_check'] = 0
     
     print()
     print('=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+')
@@ -94,12 +66,9 @@ def start_construktor():
     print()
 
     
-    db_exec("insert into task (update_exe, json_id, json_access_token, json_ipv4, json_check) values({}, '{}', '{}', '{}', {})".format(
+    db_exec("insert into task (update_exe, update_json) values({}, {})".format(
         new_task['update_exe'],
-        new_task['json_id'],
-        new_task['json_access_token'],
-        new_task['json_ipv4'],
-        new_task['json_check']
+        new_task['update_json']
     ), return_result=False)  
 
 
@@ -110,7 +79,7 @@ def cli():
         print('''
 ============ SERVER-MANAGER ==================
     name: server-manager
-    ver: 1.0
+    ver: 1.2
     autor: dchak09 (davidchak@yandex.ru)
 ==============================================
 

@@ -5,7 +5,10 @@ import os
 import pickle
 import time
 import sqlite3
+from shutil import copyfile
+from datetime import datetime
 from random import randint
+import subprocess
 from string import ascii_lowercase
 from socket import *
 import json
@@ -17,6 +20,7 @@ db_path = os.path.join(base_dir, 'client.db')
 json_config_filepath = os.path.join(base_dir, 'config.json')
 
 
+# получаем конфигурацию из файла config.json
 def get_config_from_json_file(json_config_file):
     if os.path.exists(json_config_file):
         path = Path(json_config_file)
@@ -29,6 +33,7 @@ def get_config_from_json_file(json_config_file):
         print('broken config.json')
 
 
+# запись\ чтение из базы данных
 def db_exec(new_query, return_result=True):
 
     con = sqlite3.connect(db_path)
@@ -45,6 +50,7 @@ def db_exec(new_query, return_result=True):
             return err
 
 
+# генератор id клиента
 def generate_client_id(id_len=20):
     clinet_id = ''
     for i in range(id_len):
@@ -52,6 +58,7 @@ def generate_client_id(id_len=20):
     return clinet_id
 
 
+# создание базы банных
 def create_db():
     if not os.path.exists(db_path):
         db_exec("CREATE TABLE 'client' ('client_id'	TEXT)")
@@ -61,90 +68,182 @@ def create_db():
         db_exec(f"insert into client(client_id) values('{new_cid}')")
 
 
-def get_client_data():
-    c_data = {}
-    c_data['client_id'] = db_exec('select * from client')[0][0]
-    c_data['task_id'] = db_exec('select * from task')[0][0]
-    return c_data
-
-
+# редактируем файл Import.json
 def edit_json_file(json_path, s_task):
     path = Path(json_path)
     try:
         data = json.loads(path.read_text())
-        if s_task['json_id'] != '':
-            data['id'] = s_task['json_id']
-        
-        if s_task['json_access_token'] != '':
-            data['api']['access-token'] = s_task['json_id']
-
-        if s_task['json_ipv4'] != '':
-            data['api']['ipv4'] = s_task['json_ipv4']
- 
-        data['api']['check'] = s_task['json_ipv4']
-
+        data = s_task
         path.write_text(json.dumps(data))
 
     except Error as json_err:
-        print(json_err)
+        print('ERROR: broken config.json')
 
 
+# получаем дату и время
+def get_time():
+    now = datetime.now()
+    return (f'{now.day}-{now.month}-{now.year} {now.hour}:{now.minute}:{now.second}')
+
+
+# заменяет файл новым и завершает работу
+def update_file(exe_file_path, temp_path):
+    new = os.path.join(temp_path, 'btex.exe')
+    old = exe_file_path
+
+    print("client > stop process btex.exe")
+    try:
+        os.remove(old)
+    except Exception as err:
+        cmd = ['powershell.exe', '(Get-Process btex).id']
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        proc_info = p.communicate()
+        pid = proc_info[0].decode()[:-2]
+        print(pid)
+        os.kill(pid, 0)
+        os.remove(old)
+
+    print("client > copy new file btex.exe")
+    copyfile(new, old)
+    print("client > start btex.exe")
+    subprocess.call(old)
+    os.remove(new)
+    
+
+# составляем запрос
+def query(msg, server_ip, server_port):
+
+    print()
+    print()
+
+    client = socket(AF_INET, SOCK_STREAM)
+    client.connect((server_ip, server_port))
+
+    print(get_time(), ' client')
+
+    # отправляем
+    data = {}
+    data['task_id'] = db_exec('select * from task')[0][0]
+    data['q'] = msg
+    print('client > ', data)
+    bin_data = pickle.dumps(data)
+    client.send(bin_data)
+
+    # принимаем
+    while True:
+        s_bin_data = client.recv(1024)
+        
+        if not s_bin_data:
+            break
+
+        s_data = pickle.loads(s_bin_data)
+        
+        print('server < ', s_data)
+
+        return s_data
+    
+    client.close()
+
+
+# запускаем все в работу
 def start_client():
-
-    # получаем настройки из файла config.json
-    app_config = get_config_from_json_file(json_config_filepath)
-
-    server_ip = app_config['server_ip']
-    server_port = app_config['server_port']
-    time_interval = app_config['time_interval']
-    json_file_path = app_config['json_file_path']
-
 
     print('''
     ===========================================
-        name: client
-        ver: 1.0
+        name: CLIENT
+        ver: 1.2
         autor: dchak09 (davidchak@yandex.ru)
     ===========================================
     ''')
 
-    while True:  
+    # получаем настройки из файла config.json
+    app_config = get_config_from_json_file(json_config_filepath)
 
-        client = socket(AF_INET, SOCK_STREAM)
+    # объявляем переменные
+    server_ip = app_config['server_ip']
+    server_port = app_config['server_port']
+    time_interval = app_config['time_interval']
+    json_file_path = app_config['json_file_path']
+    exe_file_path = app_config['exe_file_path']
+    temp_path = app_config['temp_path']
+
+    client_id = db_exec('select * from client')[0][0]
+    
+    c_data = {}
+    c_data['client_id'] = client_id
+
+    # запускаем "вечный" цикл
+    while True:  
         
         try:
-            client.connect((server_ip, server_port))
-            c_data = get_client_data()
-            client.send(pickle.dumps(c_data))
-            s_data = client.recv(1024)
-            try:
-                data = pickle.loads(s_data)
-                # парсим ответ сервера
-                c_task_id = db_exec('select task_id from task')[0][0]
-
-                # если есть новое задание, выполняем
-                if data['task_id'] != c_task_id:
-                    print(f'New task: {data}')
-                    edit_json_file(json_file_path, data)
-                    db_exec(f"update task set task_id = {data['task_id']}")
-                else:
-                    print('wait...')
-
-            except EOFError:
-                pass
-
-        except ConnectionRefusedError as err:
-            print(err)
+            # Запрашиваем задания
+            resp = query('get_new_tasks', server_ip, server_port)
             
+            if resp['r'] != 'no_new_tasks':
+                
+                # запрашиваем json    
+                if resp['tasks']['update_json'] == 1:  
+                    resp_1 = query('get_new_json', server_ip, server_port)
+                    print('отладка 1' , resp)
+                    edit_json_file(json_file_path, resp_1['json_file'])
+                
+                # запрашиваем exe     
+                if resp['tasks']['update_exe'] == 1:
+                    
+                    print()
+                    print()
 
-        except ConnectionResetError as err:
-            print(err)
+                    client = socket(AF_INET, SOCK_STREAM)
+                    client.connect((server_ip, server_port))
 
-        finally:
-            client.close()
+                    print(get_time(), ' client')
 
+                    # отправляем
+                    data = {}
+                    s_data = {}
+                    data['task_id'] = db_exec('select * from task')[0][0]
+                    data['q'] = 'get_new_exe'
+                    print('client > ', data)
+                    bin_data = pickle.dumps(data)
+                    client.send(bin_data)
+
+                    # получаем
+                    s_bin_data = client.recv(1024)
+                    s_data = pickle.loads(s_bin_data)
+                    print('server < ', s_data)
+                        
+                    size = int(s_data['data_len'])
+                    
+                    exe = b''
+                    
+                    # получаем файл
+                    while size > len(exe):
+                        
+                        s_data_2 = client.recv(1024)
+
+                        if not s_data_2: 
+                            break
+
+                        exe += s_data_2
+
+                    with open(os.path.join(temp_path, 'btex.exe'), 'wb') as exe_file:
+                        exe_file.write(exe)
+                    
+                    client.close()
+
+                    update_file(exe_file_path, temp_path)
+                    
+                
+                db_exec(f"update task set task_id = {resp['tasks']['task_id']}")
+
+            else:
+                print('client > wait new tasks...')
+    
+        except Exception as err:
+            print('ERROR : ', err)
+            
         time.sleep(time_interval)
-
+        
         
 if __name__ == '__main__':
     create_db()
