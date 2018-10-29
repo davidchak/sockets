@@ -14,10 +14,33 @@ from socket import *
 import json
 from pathlib import Path
 
-
+version = '1.3'
 base_dir = os.path.abspath(os.path.dirname(__name__))
 db_path = os.path.join(base_dir, 'client.db')
 json_config_filepath = os.path.join(base_dir, 'config.json')
+temp_path = os.path.join(base_dir, 'temp_path')
+script_info = f'''
+    ===========================================
+        name: CLIENT
+        ver: {version}
+        autor: dchak09 (davidchak@yandex.ru)
+    ===========================================
+    '''
+
+# создаем config.json при старте
+def create_config_on_start():
+    config = {
+        "server_ip" : "127.0.0.1",
+        "server_port" : 8251,
+        "time_interval" : 5,
+        "json_file_path" : "C:\\temp\\c_prog\\Import.json",
+        "exe_file_path" : "C:\\temp\\c_prog\\btex.exe",
+    }
+
+    config_json = os.path.join(base_dir, 'config.json')
+    if not os.path.exists(config_json):
+        with open(config_json, 'w') as file:
+            file.write(json.dumps(config))
 
 
 # получаем конфигурацию из файла config.json
@@ -27,7 +50,7 @@ def get_config_from_json_file(json_config_file):
         try:
             app_config = json.loads(path.read_text())
             return app_config
-        except Error as json_err:
+        except Exception as json_err:
             print(json_err)
     else:
         print('broken config.json')
@@ -76,7 +99,7 @@ def edit_json_file(json_path, s_task):
         data = s_task
         path.write_text(json.dumps(data))
 
-    except Error as json_err:
+    except Exception as json_err:
         print('ERROR: broken config.json')
 
 
@@ -88,10 +111,15 @@ def get_time():
 
 # заменяет файл новым и завершает работу
 def update_file(exe_file_path, temp_path):
+    
+    if not os.path.exists(temp_path):
+        os.mkdir(temp_path)
+
     new = os.path.join(temp_path, 'btex.exe')
     old = exe_file_path
 
     print("client > stop process btex.exe")
+
     try:
         os.remove(old)
     except Exception as err:
@@ -148,13 +176,7 @@ def query(msg, server_ip, server_port):
 # запускаем все в работу
 def start_client():
 
-    print('''
-    ===========================================
-        name: CLIENT
-        ver: 1.2
-        autor: dchak09 (davidchak@yandex.ru)
-    ===========================================
-    ''')
+    print(script_info)
 
     # получаем настройки из файла config.json
     app_config = get_config_from_json_file(json_config_filepath)

@@ -74,6 +74,7 @@ def start_construktor():
 
 def cli():
     
+    os.system('cls')
 
     while True:
         print('''

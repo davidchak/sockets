@@ -11,9 +11,31 @@ from pathlib import Path
 import json
 
 
+version = '1.3'
 base_dir = os.path.abspath(os.path.dirname(__name__))
 db_path = os.path.join(base_dir, 'app.db')
 json_config_filepath = os.path.join(base_dir, 'config.json')
+script_info = f'''
+    ===========================================
+        name: SERVER
+        ver: {version}
+        autor: dchak09 (davidchak@yandex.ru)
+    ===========================================
+    '''
+
+
+# создаем config.json при старте
+def create_config_on_start():
+    config = {
+        "server_ip" : "0.0.0.0",
+        "server_port" : 8251,
+        "update_path" : "C:\\temp\\s_prog"
+    }
+
+    config_json = os.path.join(base_dir, 'config.json')
+    if not os.path.exists(config_json):
+        with open(config_json, 'w') as file:
+            file.write(json.dumps(config))
 
 
 # получаем конфигурацию из файла config.json
@@ -23,7 +45,7 @@ def get_config_from_json_file(json_config_file):
         try:
             app_config = json.loads(path.read_text())
             return app_config
-        except Error as json_err:
+        except Exception as json_err:
             print("ERROR: сan't open CONFIG.JSON")
     else:
         print('ERROR: broken config.json')
@@ -68,20 +90,14 @@ def read_json_file(json_file):
         try:
             data = json.loads(path.read_text())
             return data
-        except Error as json_err:
+        except Exception as json_err:
             print('ERROR: broken config.json')
 
 
 # запускаем сервер
 def start_server():
 
-    print('''
-    ===========================================
-        name: SERVER
-        ver: 1.2
-        autor: dchak09 (davidchak@yandex.ru)
-    ===========================================
-    ''')
+    print(script_info)
 
     # получаем конфигурационные данные
     app_config = get_config_from_json_file(json_config_filepath)
@@ -93,6 +109,10 @@ def start_server():
     server_ip = app_config['server_ip']
     server_port = app_config['server_port']
     update_path = app_config['update_path']
+    
+    # TODO: проверить на windows
+    # if update_path[0] == '%':
+    #     update_path = os.environ[app_config['update_path']]
 
     # пути к файлам обновлений
     json_filepath = os.path.join(update_path, 'Import.json')
@@ -158,18 +178,12 @@ def start_server():
                     print('server > ', 'отправляю exe-файл')
                     conn.sendall(data)
 
-
             else:
                 s_data = {}
                 s_data['server_name'] = 'server'
                 s_data['r'] = 'no_new_tasks'
                 print('server > ', s_data)
                 conn.send(pickle.dumps(s_data))
-
-
-            # TODO: парсинг ответа
-            # TODO: формирование s_data
-            # TODO: отправка данных
 
         except Exception as err:
             print('Error :', err)
