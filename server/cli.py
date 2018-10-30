@@ -6,8 +6,10 @@ import time
 import pickle
 import sqlite3
 
+
 base_dir = os.path.abspath(os.path.dirname(__name__))
 db_path = os.path.join(base_dir, 'app.db')
+
 
 def db_exec(new_query, return_result=True):
 
@@ -80,7 +82,7 @@ def cli():
         print('''
 ============ SERVER-MANAGER ==================
     name: server-manager
-    ver: 1.2
+    ver: 1.3
     autor: dchak09 (davidchak@yandex.ru)
 ==============================================
 

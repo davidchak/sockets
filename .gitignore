@@ -1,9 +1,19 @@
+# исключаем кэш
+__pycache__
+.vscode
+
+# исключаем виртуальное окружение python
 venv
+
+# исключаем базы данных
 app.db
 client.db
-__pycache__
+
+# исключаем расширения
 *.pyc
-.vscode
-client.spec
+*.zip
+
+# исключаем файлы и папки для сборки *.exe
+*.spec
 dist
 build

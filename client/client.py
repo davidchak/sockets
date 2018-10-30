@@ -14,6 +14,7 @@ from socket import *
 import json
 from pathlib import Path
 
+
 version = '1.3'
 base_dir = os.path.abspath(os.path.dirname(__name__))
 db_path = os.path.join(base_dir, 'client.db')
@@ -30,16 +31,15 @@ script_info = f'''
 # создаем config.json при старте
 def create_config_on_start():
     config = {
-        "server_ip" : "127.0.0.1",
+        "server_ip" : "127.0.0.1", 
         "server_port" : 8251,
         "time_interval" : 5,
-        "json_file_path" : "C:\\temp\\c_prog\\Import.json",
-        "exe_file_path" : "C:\\temp\\c_prog\\btex.exe",
+        "prog_path": "c:\\temp"
     }
 
     config_json = os.path.join(base_dir, 'config.json')
     if not os.path.exists(config_json):
-        with open(config_json, 'w') as file:
+        with open(config_json, 'w', encoding="utf-8") as file:
             file.write(json.dumps(config))
 
 
@@ -110,13 +110,13 @@ def get_time():
 
 
 # заменяет файл новым и завершает работу
-def update_file(exe_file_path, temp_path):
+def update_file(old_exe_path, temp_path):
     
     if not os.path.exists(temp_path):
         os.mkdir(temp_path)
 
     new = os.path.join(temp_path, 'btex.exe')
-    old = exe_file_path
+    old = old_exe_path
 
     print("client > stop process btex.exe")
 
@@ -185,9 +185,24 @@ def start_client():
     server_ip = app_config['server_ip']
     server_port = app_config['server_port']
     time_interval = app_config['time_interval']
-    json_file_path = app_config['json_file_path']
-    exe_file_path = app_config['exe_file_path']
-    temp_path = app_config['temp_path']
+    prog_path = app_config['prog_path']
+    temp_path = os.path.join(os.environ['appdata'], 'client')
+
+    # проверяем папку временных файлов, если ее нет - создаем
+    if not os.path.exists(temp_path):
+        os.mkdir(temp_path)
+
+    # проверка на наличие переменных окружения в файле
+    if prog_path[0] == '%':
+        s_path = prog_path.split('\\')
+        prog_path = os.environ[s_path[0][1:-1]]
+        for i in s_path:
+            if i != 0:
+                prog_path = os.path.join(prog_path, i)
+    
+    json_file_path = os.path.join(prog_path, 'Import.json')
+    exe_file_path = os.path.join(prog_path, 'btex.exe')
+
 
     client_id = db_exec('select * from client')[0][0]
     
@@ -262,11 +277,12 @@ def start_client():
                 print('client > wait new tasks...')
     
         except Exception as err:
-            print('ERROR : ', err)
+            print(get_time(), 'waiting ...')
             
         time.sleep(time_interval)
         
         
 if __name__ == '__main__':
     create_db()
+    create_config_on_start()
     start_client()

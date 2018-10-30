@@ -34,7 +34,7 @@ def create_config_on_start():
 
     config_json = os.path.join(base_dir, 'config.json')
     if not os.path.exists(config_json):
-        with open(config_json, 'w') as file:
+        with open(config_json, 'w', encoding="utf-8") as file:
             file.write(json.dumps(config))
 
 
@@ -110,21 +110,20 @@ def start_server():
     server_port = app_config['server_port']
     update_path = app_config['update_path']
     
-    # TODO: проверить на windows
-    # if update_path[0] == '%':
-    #     update_path = os.environ[app_config['update_path']]
+    # проверка на наличие переменных окружения в файле
+    if update_path[0] == '%':
+        env_path = update_path[0][1:-1]
+        update_path = os.environ[env_path]
 
     # пути к файлам обновлений
     json_filepath = os.path.join(update_path, 'Import.json')
     exe_filepath = os.path.join(update_path, 'btex.exe')
-
 
     # инициализируем сервер
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((server_ip, server_port))
     server.listen(50)
     
-
     # запускаем "вечный" обработчик
     while True:
 
@@ -194,5 +193,6 @@ def start_server():
 
 
 if __name__ == '__main__':
+    create_config_on_start()
     start_server()
   
